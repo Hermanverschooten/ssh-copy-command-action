@@ -1,0 +1,28 @@
+name: Test
+
+on: 
+  push:
+    branches:
+      - test
+jobs:
+  deploy:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          path: "ssh-copy-command-action"
+
+      - run: touch "./file_to_copy"
+
+      - name: Deploy
+        uses: ./ssh-copy-command-action
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+          SOURCE: "./file_to_copy"
+          REMOTE_HOST: remote_host.example.org
+          REMOTE_USER: root
+          TARGET: "/opt/dest"
+          CMD: "./deploy"
+

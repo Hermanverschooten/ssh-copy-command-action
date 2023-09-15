@@ -1,0 +1,113 @@
+name: 'SSH Copy Command'
+description: 'Copy a file over ssh, then run a command over the same connection.'
+author: "Herman verschooten"
+inputs:
+  ssh_private_key:
+    description: 'SSH Private key'
+    required: true
+  remote_host:
+    description: 'Remote host'
+    required: true
+  remote_user:
+    description: 'Remote user'
+    required: true
+  remote_port:
+    description: 'Remote port'
+    required: false
+    default: '22'
+  source:
+    description: 'Source directory/file'
+    required: true
+    default: ''
+  target:
+    description: 'Target directory/file'
+    required: false
+    default: '/home/REMOTE_USER/'
+  scp_args:
+    description: 'extra argumenst for scp'
+    required: false
+    default: '-4'
+  cmd_args:
+    description: 'extra arguments for ssh command'
+    required: false
+    default: '-4'
+  cmd:
+    description: 'command to run on the remote server after the copy succeeds'
+    required: true
+runs:
+  using: 'composite'
+  steps:
+    - name: Check inputs
+      shell: bash
+      run: |
+        if [ -z "$SSH_PRIVATE_KEY" ]
+        then
+          echo "Missing ssh_private_key" 
+          exit 1
+        fi
+        if [ -z "$REMOTE_HOST" ]
+        then
+          echo "Missing remote_host" 
+          exit 1
+        fi
+        if [ -z "$REMOTE_USER" ]
+        then
+          echo "Missing remote_user" 
+          exit 1
+        fi
+        if [ -z "$SOURCE" ]
+        then
+          echo "Missing source" 
+          exit 1
+        fi
+        if [ -z "$TARGET" ]
+        then
+          echo "Missing target" 
+          exit 1
+        fi
+        if [ -z "$CMD" ]
+        then
+          echo "Missing cmd" 
+          exit 1
+        fi
+    - name: Setup SSH
+      shell: bash
+      run: |
+        mkdir -p ~/.ssh
+        echo -e "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+
+        cat > ~/.ssh/config << EOF
+        StrictHostKeyChecking no
+        Host *
+          ControlMaster auto
+          ControlPath ~/.ssh/master-%r@%h:%p
+        EOF
+
+    - name: Copy file to remote
+      shell: bash
+      run: |
+        if [ -z "$REMOTE_PORT" ]
+        then
+          REMOTE_PORT=22
+        fi
+
+        if [ -s "$SCP_ARGS"]
+        then
+          SCP_ARGS="-4"
+        fi
+
+        if [ -s "$CMD_ARGS"]
+        then
+          CMD_ARGS="-4"
+        fi
+
+        scp -v -P "${REMOTE_PORT}" $SCP_ARGS $SOURCE "${REMOTE_USER}"@"${REMOTE_HOST}":"${TARGET}"
+        if [ $? -eq 0 ]
+        then
+          ssh "${CMD_ARGS}" "${REMOTE_USER}"@"${REMOTE_HOST}":"${REMOTE_PORT}" "${CMD}"
+        fi
+
+branding:
+  color: 'green'
+  icon: 'copy'
