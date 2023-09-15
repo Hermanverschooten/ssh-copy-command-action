@@ -77,13 +77,6 @@ runs:
         echo -e "${SSH_PRIVATE_KEY}" > ~/.ssh/id_rsa
         chmod 600 ~/.ssh/id_rsa
 
-        cat > ~/.ssh/config << EOF
-        StrictHostKeyChecking no
-        Host *
-          ControlMaster auto
-          ControlPath ~/.ssh/master-%r@%h:%p
-        EOF
-
     - name: Copy file to remote
       shell: bash
       run: |
@@ -102,10 +95,11 @@ runs:
           CMD_ARGS="-4"
         fi
 
-        scp -v -P "${REMOTE_PORT}" $SCP_ARGS $SOURCE "${REMOTE_USER}"@"${REMOTE_HOST}":"${TARGET}"
+        ssh -f -M -S control_socket -v $CMD_ARGS -p "${REMOTE_PORT}" "${REMOTE_USER}"@"${REMOTE_HOST}"
+        scp -v -o ControlPath=control_socket $SCP_ARGS "$SOURCE" "${REMOTE_USER}"@"${REMOTE_HOST}":"${TARGET}"
         if [ $? -eq 0 ]
         then
-          ssh -v -p "${REMOTE_PORT}" "${CMD_ARGS}" "${REMOTE_USER}"@"${REMOTE_HOST}" "${CMD}"
+          ssh -v -S control_socket "${REMOTE_USER}"@"${REMOTE_HOST}" "${CMD}"
         fi
 
 branding:
