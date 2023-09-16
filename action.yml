@@ -95,12 +95,16 @@ runs:
           CMD_ARGS="-4"
         fi
 
+        echo "Opening SSH connection"
         ssh -f -N -M -o StrictHostKeyChecking=no -S control_socket $CMD_ARGS -p "${REMOTE_PORT}" "${REMOTE_USER}"@"${REMOTE_HOST}"
+        echo "Copying file(s) to remote"
         scp -o ControlPath=control_socket $SCP_ARGS "$SOURCE" "${REMOTE_USER}"@"${REMOTE_HOST}":"${TARGET}"
         if [ $? -eq 0 ]
         then
+          echo "Running remote command"
           ssh -S control_socket "${REMOTE_USER}"@"${REMOTE_HOST}" "${CMD}"
         fi
+        echo "Done"
 
 branding:
   color: 'green'
